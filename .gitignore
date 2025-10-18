@@ -3,6 +3,7 @@
 *.env
 *.key
 *.pem
+*.spec
 
 # --- drivers / binaries ---
 msedgedriver.exe
@@ -26,6 +27,8 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+build/
+dist/
 
 # --- Test/Cache ---
 .pytest_cache/
