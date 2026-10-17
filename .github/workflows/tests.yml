@@ -25,10 +25,10 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: 未使用・誤りのチェック（pyflakes）
-        run: python -m pyflakes *.py tests/*.py
+        run: python -m pyflakes main.py recipe_poster tools tests
 
       - name: 使っていないコードのチェック（vulture）
-        run: python -m vulture *.py tests/*.py --min-confidence 60
+        run: python -m vulture main.py recipe_poster tools tests --min-confidence 60
 
       - name: 自動テスト（pytest）
         run: python -m pytest tests -v

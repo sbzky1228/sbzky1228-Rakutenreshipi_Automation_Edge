@@ -4,8 +4,8 @@ import subprocess
 
 import pytest
 
-import backup
-import config
+from recipe_poster import config
+from recipe_poster.storage import backup
 
 DB = {"dbname": "RakutenRecipe_information", "user": "postgres", "password": "secret", "host": "localhost", "port": "5432"}
 

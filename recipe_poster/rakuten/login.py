@@ -8,8 +8,8 @@ import re
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
-from config import RAKUTEN_USER_ID, RAKUTEN_PASSWORD, RECIPE_LOGIN_URL, RECIPE_MYPAGE_URL
-from logger import get_logger
+from recipe_poster.config import RAKUTEN_USER_ID, RAKUTEN_PASSWORD, RECIPE_LOGIN_URL, RECIPE_MYPAGE_URL
+from recipe_poster.logger import get_logger
 
 RAKUTEN_LOGIN_HOST = "login.account.rakuten.com"
 

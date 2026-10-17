@@ -1,8 +1,8 @@
 import pytest
 import yaml
 
-from recipe_folders import find_recipe_folders, load_recipe
-from recipe_model import RecipeFormatError
+from recipe_poster.recipes.folders import find_recipe_folders, load_recipe
+from recipe_poster.recipes.model import RecipeFormatError
 
 RECIPE_TEXT = """■レシピタイトル
 txtのタイトル

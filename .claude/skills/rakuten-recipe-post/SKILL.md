@@ -10,9 +10,9 @@ description: 楽天レシピ自動投稿ツール（Selenium + Edge）を改修�
 ## 作業の順番
 
 1. **変更前に現状を把握する**: `python -X utf8 -m pytest` と pyflakes / vulture が通ることを確認
-2. **読み込み・変換の変更**はブラウザ不要の部分だけで完結させる（recipe.yaml は `recipe_model.py`、recipe.txt は `recipe_text.py`、楽天向けの変換は `rakuten_recipe.py`。テストは `tests/` の同名ファイル）。実際の素材は次で一括確認できる:
+2. **読み込み・変換の変更**はブラウザ不要の部分だけで完結させる（recipe.yaml は `recipe_poster/recipes/model.py`、recipe.txt は `recipes/text.py`、楽天向けの変換は `rakuten/convert.py`。テストは `tests/test_recipe_model.py`・`test_recipe_text.py`・`test_rakuten_convert.py`）。実際の素材は次で一括確認できる:
    ```bash
-   python -X utf8 -c "import config; from pathlib import Path; from recipe_folders import *; from rakuten_recipe import *; [print(f.name, validate_rakuten_post(to_rakuten_post(load_recipe(f), f))) for f in find_recipe_folders(Path(config.BASE_FOLDER))]"
+   python -X utf8 -c "from pathlib import Path; from recipe_poster import config; from recipe_poster.recipes.folders import *; from recipe_poster.rakuten.convert import *; [print(f.name, validate_rakuten_post(to_rakuten_post(load_recipe(f), f))) for f in find_recipe_folders(Path(config.BASE_FOLDER))]"
    ```
 3. **画面操作の変更**は `--dry-run` で確かめる（入力まで行い、最後に下書きを削除する。公開申請・投稿履歴の記録・バックアップはしない。投稿履歴の読み取りのためDBには接続する）
    ```bash
@@ -38,7 +38,7 @@ description: 楽天レシピ自動投稿ツール（Selenium + Edge）を改修�
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
-| 投稿したことになっているのに楽天レシピに無い | 各欄は blur 時に下書きへ保存され、公開申請は保存済みの下書きを送るだけ。入力しただけでは保存されない | 入力後に blur し、`window.__recipeSaving` が0になるまで待つ（`RecipePoster._type`）。成功判定はマイページの「公開待ち」で行う |
+| 投稿したことになっているのに楽天レシピに無い | 各欄は blur 時に下書きへ保存され、公開申請は保存済みの下書きを送るだけ。入力しただけでは保存されない | 入力後に blur し、`window.__recipeSaving` が0になるまで待つ（`rakuten/post.py` の `RecipePoster._type`）。成功判定はマイページの「公開待ち」で行う |
 | タイトルが「下書き_日時」に戻る／公開申請ボタンが押せない | 同じタイトルのレシピ・**下書き**が既にある（試験で残った下書きも含む） | 失敗・お試し実行では下書きを削除する（`post()` の finally）。残っていたら下書き一覧から消す |
 | カテゴリが選択されない（選択中0件） | 行 `.js_category_check__flg` のクリックで切り替える作り。input を `click()` すると input の切り替え＋行のクリック処理で2回切り替わる | 行要素をクリックする |
 | 作り方の行が追加されない | 入力・保存の合間に追加ボタンを押した | 先に必要な行数まで追加してから入力する |

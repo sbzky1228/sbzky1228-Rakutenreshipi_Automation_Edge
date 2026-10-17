@@ -14,12 +14,12 @@ from dotenv import load_dotenv
 
 # プログラムのフォルダ（.env・logsの基準）
 # - .exe実行時: RakutenRecipe_Auto_Post.exe と同じフォルダ
-# - python main.py 実行時: このファイルのあるフォルダ（プロジェクト直下）
+# - python main.py 実行時: プロジェクト直下（このファイルは recipe_poster フォルダの中にある）
 # タスクスケジューラ等で作業フォルダが変わっても同じ場所を使うよう固定する
 APP_DIR = (
     Path(sys.executable).resolve().parent
     if getattr(sys, 'frozen', False)
-    else Path(__file__).resolve().parent
+    else Path(__file__).resolve().parent.parent
 )
 
 # プログラムのフォルダの .env を優先し、無ければ作業フォルダの .env を読む

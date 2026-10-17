@@ -7,7 +7,7 @@
 投稿画面を開くと下書き（レシピID）が作られ、各欄は入力欄から離れた時（blur）に下書きへ保存される。
 公開申請ボタンは保存済みの下書きを公開申請するだけなので、入力ごとに保存の完了を待つ。
 公開申請のあと、マイページの「公開中」「公開待ち」に載ったことを確認できたら成功とする。
-入力する内容は rakuten_recipe.RakutenPost（recipe.yaml / recipe.txt から変換したもの）。
+入力する内容は rakuten.convert.RakutenPost（recipe.yaml / recipe.txt から変換したもの）。
 """
 import datetime
 import time
@@ -18,9 +18,9 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
-from config import RECIPE_MYPAGE_URL, RECIPE_POST_URL, RECIPE_TOP_URL
-from logger import get_logger
-from rakuten_recipe import MAX_LENGTHS, RakutenPost, choose_categories
+from recipe_poster.config import RECIPE_MYPAGE_URL, RECIPE_POST_URL, RECIPE_TOP_URL
+from recipe_poster.logger import get_logger
+from recipe_poster.rakuten.convert import MAX_LENGTHS, RakutenPost, choose_categories
 
 # 投稿済みとみなすマイページのタブ（公開中・公開待ち）
 POSTED_STATUSES = ("publish", "pending")
@@ -52,7 +52,7 @@ class RecipePoster:
 
     def _wait_saved(self, timeout: float = 30):
         """下書きへの保存（画面の通信）が終わるまで待つ"""
-        # window.__recipeSaving は browser.TRACK_SAVING_SCRIPT が数える実行中の保存通信の数
+        # window.__recipeSaving は rakuten.browser.TRACK_SAVING_SCRIPT が数える実行中の保存通信の数
         time.sleep(0.3)  # 入力欄から離れてから保存の通信が始まるまでの間を空ける
         WebDriverWait(self.driver, timeout).until(
             lambda d: d.execute_script("return (window.__recipeSaving || 0) === 0;"),

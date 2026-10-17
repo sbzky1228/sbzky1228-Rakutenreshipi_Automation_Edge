@@ -4,7 +4,7 @@
 import datetime
 import sys
 from pathlib import Path
-from config import LOG_DIR
+from recipe_poster.config import LOG_DIR
 
 # コンソールがcp932の場合に「✓」等で UnicodeEncodeError となり処理が止まらないよう、
 # 表示できない文字は置き換えて出力する

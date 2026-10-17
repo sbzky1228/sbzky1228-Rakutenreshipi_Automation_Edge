@@ -10,9 +10,9 @@
 """
 from pathlib import Path
 
-from logger import get_logger
-from recipe_model import RECIPE_FILE_NAME, RecipeData, RecipeFormatError, load_recipe_yaml
-from recipe_text import load_recipe_text
+from recipe_poster.logger import get_logger
+from recipe_poster.recipes.model import RECIPE_FILE_NAME, RecipeData, RecipeFormatError, load_recipe_yaml
+from recipe_poster.recipes.text import load_recipe_text
 
 IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png")
 

@@ -4,20 +4,23 @@ recipe.txt → recipe.yaml 変換
 レシピフォルダの recipe.txt（■見出し形式）を読み取り、同じフォルダに recipe.yaml を作る。
 元の recipe.txt はそのまま残す（recipe.yaml ができると、投稿では recipe.yaml が使われる）。
 
-使い方:
-    python convert_to_yaml.py                  投稿素材フォルダのすべてのレシピを変換
-    python convert_to_yaml.py <フォルダ> ...    指定したレシピフォルダだけ変換
-    python convert_to_yaml.py --overwrite      既にある recipe.yaml も作り直す
+使い方（プロジェクト直下で実行）:
+    python tools/convert_to_yaml.py                  投稿素材フォルダのすべてのレシピを変換
+    python tools/convert_to_yaml.py <フォルダ> ...    指定したレシピフォルダだけ変換
+    python tools/convert_to_yaml.py --overwrite      既にある recipe.yaml も作り直す
 """
 import argparse
 import sys
 from pathlib import Path
 
-import config
-from logger import get_logger
-from recipe_folders import find_recipe_folders, find_text_and_image
-from recipe_model import RECIPE_FILE_NAME, RecipeFormatError, dump_recipe_yaml
-from recipe_text import load_recipe_text
+# tools フォルダから直接起動しても、プロジェクト直下の recipe_poster を import できるようにする
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from recipe_poster import config
+from recipe_poster.logger import get_logger
+from recipe_poster.recipes.folders import find_recipe_folders, find_text_and_image
+from recipe_poster.recipes.model import RECIPE_FILE_NAME, RecipeFormatError, dump_recipe_yaml
+from recipe_poster.recipes.text import load_recipe_text
 
 
 def convert_folder(folder: Path, overwrite: bool = False) -> bool:

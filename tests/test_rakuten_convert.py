@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from rakuten_recipe import (
+from recipe_poster.rakuten.convert import (
     RakutenPost, choose_categories, cooking_time_label, cost_label, to_rakuten_post, validate_rakuten_post,
 )
-from recipe_model import Ingredient, RecipeData, Step
+from recipe_poster.recipes.model import Ingredient, RecipeData, Step
 
 
 def make_recipe(**changes) -> RecipeData:

@@ -1,7 +1,7 @@
 import pytest
 
-from recipe_model import Ingredient, RecipeFormatError, Step
-from recipe_text import load_recipe_text, parse_minutes, parse_recipe_text, parse_yen, split_category
+from recipe_poster.recipes.model import Ingredient, RecipeFormatError, Step
+from recipe_poster.recipes.text import load_recipe_text, parse_minutes, parse_recipe_text, parse_yen, split_category
 
 # ChatGPTで作る標準の形式（■見出し、材料は「名前: 分量」）
 SQUARE_FORMAT = """■レシピタイトル（25文字以内）
