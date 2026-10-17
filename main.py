@@ -1,52 +1,173 @@
-from datetime import date                                               # 今日の日付を取得するために使用
-from Check_Target import check_target                                   # 投稿対象のレシピ名(フォルダ名)を取得
-from Get_Total_Count_Of_This_Month_From_DataBase import get_total_count # データベースから今月の累計投稿件数を取得
-from Add_Recipe_Information_To_DataBese import add_recipe_info          # 投稿したレシピをデータベースに記録する
-from RakutenRecipe_Login import login_to_rakuten                        # 楽天レシピにログイン    
-from RakutenRecipe_Post import recipe_post                              # レシピを投稿
-# from line_notify import send_line_notify                              # 後述のLINE通知関数
-from dotenv import load_dotenv                                          # .envファイルを読み込むために使用   
-from DataBase_connection import database_connection                     # データベース接続
-from Move_Folder import move_folder                                     # 投稿済みフォルダを移動
+"""
+楽天レシピ自動投稿 - メイン
 
-def main():
-    # .envファイルのパスを指定して読み込む(パスワードやIDを環境変数として使用するため)
-    load_dotenv('.env')
-    # 今日の日付を取得
-    today = date.today()
-    # 年、月、日を取得
-    year = today.year
-    month = today.month
-    day = today.day
-    # データベース接続
-    conn = database_connection()
-    # 1.データベースから投稿累計数を取得
-    total_count = get_total_count(conn) 
-    # 2. ベースフォルダから対象数およびレシピ名(フォルダ名)を取得
-    recipes = check_target()
-    # 3. 楽天レシピにログイン（Seleniumドライバ起動含む）
-    driver = login_to_rakuten()
-    # 4. 対象フォルダに格納されている投稿素材をチェックし投稿
-    for folder_name, recipe in zip(recipes.folder_names, recipes.recipes):     # 取得したフォルダ内に格納されているリストの数だけ繰り返す
-        post = recipe_post(driver, recipe)
-        # 投稿完了後データベースに記録しフォルダを移動
-        if post:
-            total_count += 1    #累計投稿数をインクリメント
-            add_recipe_info(conn, year, month, day, folder_name, total_count)
-            # 投稿対象をフォルダから移動(※後で追加※)
-            move_folder(folder_name)
+1. 投稿素材フォルダのレシピ（recipe.yaml、無ければ recipe.txt）のうち、
+   データベースの投稿履歴で楽天レシピに未投稿のものを読み込み、内容をチェックする
+2. 楽天レシピにログインし、1件ずつ入力して公開申請する
+3. 投稿できたレシピを投稿履歴に記録する（フォルダは移動しない）
+4. 前回のバックアップから一定日数たっていれば、データベースをバックアップする
 
-    driver.quit()   #楽天レシピを閉じる
-    conn.close()    #DBとの接続を解除
+使い方:
+    python main.py                       未投稿のレシピをすべて投稿する
+    python main.py --limit 1             1件だけ投稿する
+    python main.py --folder 豚の角煮      指定したフォルダだけ投稿する（複数指定可）
+    python main.py --dry-run             入力まで行い、公開申請・記録・バックアップはしない（動作確認用）
+    python main.py --backup              データベースのバックアップだけを取る
+"""
+import argparse
+import sys
+from pathlib import Path
 
-        # 6b. LINE通知で完了報告(※後で追加※)
-        # post_countを使用して件数を表示
-        # message = f"{recipe_name} の投稿が完了しました。"
-        # send_line_notify(message)
-    
-    # else:
-        # 今月の投稿数が30件以上であることをLINEで通知(※後で追加※)
+import backup
+import config
+import database
+from browser import create_driver
+from database import PLATFORM_RAKUTEN
+from logger import get_logger
+from rakuten_login import login_to_rakuten
+from rakuten_recipe import RakutenPost, to_rakuten_post, validate_rakuten_post
+from recipe_folders import find_recipe_folders, load_recipe
+from recipe_model import RecipeFormatError
+from recipe_post import RecipePoster
 
-    
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="楽天レシピに投稿素材のレシピを自動投稿します")
+    parser.add_argument("--limit", type=int, default=None, help="投稿する件数の上限")
+    parser.add_argument("--folder", action="append", default=None, metavar="フォルダ名",
+                        help="指定したフォルダだけ投稿する（複数指定可）")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="入力まで行い、公開申請・投稿履歴の記録・バックアップはしない")
+    parser.add_argument("--backup", action="store_true", help="データベースのバックアップだけを取る")
+    return parser.parse_args(argv)
+
+
+def load_targets(base_folder: Path, posted_keys: set[str]) -> list[RakutenPost]:
+    """
+    楽天レシピに未投稿のレシピを読み込み、投稿できる内容のものだけを返す
+    （内容に問題のあるものは理由をログに残して除外する）
+    """
+    logger = get_logger()
+    targets = []
+    skipped = 0
+    for folder in find_recipe_folders(base_folder):
+        if folder.name in posted_keys:
+            skipped += 1
+            continue
+        try:
+            post = to_rakuten_post(load_recipe(folder), folder)
+            errors = validate_rakuten_post(post)
+        except RecipeFormatError as e:
+            errors = e.errors
+        if errors:
+            logger.error(f"{folder.name}: 内容に問題があるため投稿しません")
+            for error in errors:
+                logger.error(f"  - {error}")
+            continue
+        targets.append(post)
+    if skipped:
+        logger.info(f"楽天レシピに投稿済み（投稿履歴あり）のため対象外: {skipped}件")
+    return targets
+
+
+def _record(conn, post: RakutenPost, url: str):
+    """投稿履歴に記録する。失敗しても投稿は続ける（次回は楽天レシピ上のタイトルで投稿済みと判定される）"""
+    logger = get_logger()
+    try:
+        database.add_post(conn, post.key, post.title, PLATFORM_RAKUTEN, url)
+        logger.info(f"{post.key}: 投稿履歴に記録しました（楽天レシピの累計 {database.count_posts(conn, PLATFORM_RAKUTEN)}件）")
+    except Exception as e:
+        logger.error(f"{post.key}: 投稿履歴に記録できませんでした: {e}")
+
+
+def post_recipes(targets: list[RakutenPost], poster: RecipePoster, conn, dry_run: bool,
+                 limit: int | None = None) -> tuple[int, int]:
+    """レシピを順に投稿し、(投稿できた件数, 失敗した件数) を返す。limit 件を試したら終わる"""
+    logger = get_logger()
+    on_site = poster.posted_recipes()
+    succeeded = failed = 0
+
+    for post in targets:
+        if post.title in on_site:
+            # 投稿履歴に無いが楽天レシピには同じタイトルがある（記録漏れ、または手動で投稿したもの）
+            if dry_run:
+                logger.warning(f"{post.key}: 「{post.title}」は楽天レシピに投稿済みのため投稿しません")
+            else:
+                logger.warning(f"{post.key}: 「{post.title}」は楽天レシピに投稿済みのため投稿せず、投稿履歴に記録します")
+                _record(conn, post, on_site[post.title])
+            continue
+        if limit is not None and succeeded + failed >= limit:
+            break
+
+        logger.info(f"{post.key}: 投稿を始めます（タイトル: {post.title}）")
+        url = poster.post(post, dry_run=dry_run)
+        if url is None:
+            failed += 1
+            continue
+        succeeded += 1
+        if not dry_run:
+            _record(conn, post, url)
+
+    return succeeded, failed
+
+
+def run_posting(args: argparse.Namespace) -> int:
+    """投稿の処理を行い、終了コード（0: 正常、1: 失敗あり）を返す"""
+    logger = get_logger()
+    conn = driver = None
+    try:
+        conn = database.connect()
+        targets = load_targets(Path(config.BASE_FOLDER), database.posted_keys(conn, PLATFORM_RAKUTEN))
+        if args.folder:
+            unknown = set(args.folder) - {post.key for post in targets}
+            if unknown:
+                logger.warning(f"投稿対象に無いフォルダ（投稿済み・内容に問題あり・存在しない）: {', '.join(sorted(unknown))}")
+            targets = [post for post in targets if post.key in args.folder]
+        if not targets:
+            logger.info("投稿するレシピはありません")
+            return 0
+        logger.info(f"投稿対象: {len(targets)}件（{', '.join(post.key for post in targets)}）")
+
+        driver = create_driver()
+        member_id = login_to_rakuten(driver)
+        if not member_id:
+            return 1
+        succeeded, failed = post_recipes(targets, RecipePoster(driver, member_id), conn, args.dry_run, args.limit)
+        logger.info(f"終了しました: 成功 {succeeded}件 / 失敗 {failed}件")
+        return 1 if failed else 0
+    except FileNotFoundError as e:
+        logger.error(str(e))
+        return 1
+    except Exception as e:
+        logger.error(f"処理を中断しました: {e.__class__.__name__}: {e}")
+        return 1
+    finally:
+        if driver:
+            driver.quit()
+        if conn:
+            conn.close()
+
+
+def main(argv: list[str] | None = None) -> int:
+    """終了コード（0: 正常、1: 失敗あり）を返す"""
+    args = parse_args(argv)
+    logger = get_logger()
+
+    missing = config.missing_settings()
+    if missing:
+        logger.error(f".env に次の項目を設定してください: {', '.join(missing)}")
+        return 1
+
+    if args.backup:
+        return 0 if backup.backup_if_due(force=True) else 1
+
+    logger.info("楽天レシピ自動投稿を開始します" + ("（お試し実行）" if args.dry_run else ""))
+    result = run_posting(args)
+    # 定期実行のたびに確認し、前回から BACKUP_INTERVAL_DAYS 日以上たっていればバックアップする
+    if not args.dry_run and not backup.backup_if_due():
+        result = 1
+    return result
+
+
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

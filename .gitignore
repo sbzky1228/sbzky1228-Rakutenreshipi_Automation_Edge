@@ -3,7 +3,6 @@
 *.env
 *.key
 *.pem
-*.spec
 
 # --- drivers / binaries ---
 msedgedriver.exe
@@ -23,6 +22,10 @@ venv/
 .envrc
 .venv*/
 
+# --- ログ（失敗時の画面を含む）・データベースのバックアップ ---
+logs/
+backup/
+
 # --- Tools/Editors ---
 .vscode/
 .idea/
@@ -39,8 +42,5 @@ dist/
 
 # --- 投稿用フォルダ（ルート直下を確実に無視）---
 /投稿素材/
-/投稿済み/
 # 念のため全階層もカバー
 **/投稿素材/**
-**/投稿済み/**
-EOF
