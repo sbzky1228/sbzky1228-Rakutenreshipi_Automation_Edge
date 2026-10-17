@@ -1,8 +1,8 @@
 """
 recipe.txt（■見出し形式）の読み込み - recipe.yaml への移行期間用
 
-recipe.txt を recipe.yaml と同じ形のデータに変換し、recipe_model の検証を通して RecipeData にする。
-recipe.yaml があるフォルダでは使われない（recipe_folders.load_recipe を参照）。
+recipe.txt を recipe.yaml と同じ形のデータに変換し、recipes.model の検証を通して RecipeData にする。
+recipe.yaml があるフォルダでは使われない（recipes.folders.load_recipe を参照）。
 
 テキストは見出し（■レシピタイトル、**・材料（2人分）：** など）ごとに内容を書く形式。
 見出しは行頭の記号のあとに項目名で始まる行だけを見出しとみなすため、
@@ -12,7 +12,7 @@ import re
 import unicodedata
 from pathlib import Path
 
-from recipe_model import SCHEMA_VERSION, RecipeData, parse_recipe_data
+from recipe_poster.recipes.model import SCHEMA_VERSION, RecipeData, parse_recipe_data
 
 SECTION_KEYS = (
     "レシピタイトル", "調理時間", "費用", "レシピコメント", "材料",

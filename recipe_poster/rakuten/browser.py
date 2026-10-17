@@ -3,8 +3,8 @@ from pathlib import Path
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.edge.service import Service
-from config import DRIVER_PATH
-from logger import get_logger
+from recipe_poster.config import DRIVER_PATH
+from recipe_poster.logger import get_logger
 
 # パスキー（publicKey）の navigator.credentials.get を、ユーザーがキャンセルした時と同じ
 # NotAllowedError で失敗させる。楽天のログインでパスキーのダイアログが出て止まるのを防ぐ

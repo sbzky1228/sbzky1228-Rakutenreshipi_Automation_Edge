@@ -8,7 +8,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from recipe_model import RecipeData
+from recipe_poster.recipes.model import RecipeData
 
 # 楽天レシピの入力欄の上限文字数（投稿画面の data-maxlength）
 MAX_LENGTHS = {

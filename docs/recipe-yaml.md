@@ -82,12 +82,12 @@
 
 ```bash
 # recipe.yaml の内容をチェック（問題があればすべて表示）
-python -X utf8 -c "from recipe_model import load_recipe_yaml; print(load_recipe_yaml('フォルダ/recipe.yaml'))"
+python -X utf8 -c "from recipe_poster.recipes.model import load_recipe_yaml; print(load_recipe_yaml('フォルダ/recipe.yaml'))"
 
 # 既存の recipe.txt から recipe.yaml を作る（recipe.txt は残る）
-python -X utf8 convert_to_yaml.py                  # 投稿素材のすべて
-python -X utf8 convert_to_yaml.py 投稿素材/豚の角煮  # 指定したフォルダだけ
-python -X utf8 convert_to_yaml.py --overwrite      # 既にある recipe.yaml も作り直す
+python -X utf8 tools/convert_to_yaml.py                  # 投稿素材のすべて
+python -X utf8 tools/convert_to_yaml.py 投稿素材/豚の角煮  # 指定したフォルダだけ
+python -X utf8 tools/convert_to_yaml.py --overwrite      # 既にある recipe.yaml も作り直す
 ```
 
 変換では次のように読み替えます。変換後に内容を確認し、必要なら手で直してください。

@@ -27,6 +27,8 @@
 - PostgreSQL（投稿履歴の記録用。バックアップには付属の pg_dump を使う）
 - Python 3.12（exe で使う場合は不要）
 
+exe（`RakutenRecipe_Auto_Post.exe`）は Git では管理していません。GitHub の Releases からダウンロードするか、[開発](#開発)の手順で作ってください。
+
 Edge のドライバ（msedgedriver）は Selenium が Edge のバージョンに合わせて自動で用意します。
 
 ## セットアップ
@@ -73,8 +75,8 @@ Edge のドライバ（msedgedriver）は Selenium が Edge のバージョン�
 既存の recipe.txt から recipe.yaml を作るには:
 
 ```bash
-python -X utf8 convert_to_yaml.py                      # 投稿素材のすべて（recipe.yaml が既にあるものは作らない）
-python -X utf8 convert_to_yaml.py 投稿素材/豚の角煮      # 指定したフォルダだけ
+python -X utf8 tools/convert_to_yaml.py                    # 投稿素材のすべて（recipe.yaml が既にあるものは作らない）
+python -X utf8 tools/convert_to_yaml.py 投稿素材/豚の角煮    # 指定したフォルダだけ
 ```
 
 楽天レシピの文字数の上限: タイトル25・レシピコメント80・きっかけ120・コツ120・材料名20・分量20・作り方（1手順）90文字。
@@ -180,36 +182,48 @@ Edge の画面を操作するため、「ユーザーがログオンしている
 ```bash
 pip install -r requirements-dev.txt
 python -X utf8 -m pytest                                  # 自動テスト（ブラウザ・DBには接続しない）
-python -m pyflakes *.py tests/*.py                        # 未使用の import・変数など
-python -m vulture *.py tests/*.py --min-confidence 60     # 使っていないコード
+python -m pyflakes main.py recipe_poster tools tests                         # 未使用の import・変数など
+python -m vulture main.py recipe_poster tools tests --min-confidence 60      # 使っていないコード
 ```
 
 GitHub に push すると GitHub Actions（`.github/workflows/tests.yml`）で上記のチェックとテストが自動で実行されます。
 
-exe の作成:
+exe の作成（`dist` に作られた exe を、`.env` のあるプロジェクト直下へコピーして使う）:
 
 ```powershell
 python -m PyInstaller --noconfirm --clean --workpath "$env:TEMP\RakutenRecipe_build" RakutenRecipe_Auto_Post.spec
 Copy-Item dist\RakutenRecipe_Auto_Post.exe . -Force
 ```
 
-### ファイル構成
+exe は Git に入れず（`.gitignore` で除外）、配るときは GitHub の Releases に添付します。
 
-| ファイル | 役割 |
-|---|---|
-| `main.py` | 全体の流れ（未投稿のレシピの読み込み → ログイン → 投稿 → 投稿履歴に記録 → バックアップ） |
-| `config.py` | `.env` の読み込み・設定値 |
-| `recipe_folders.py` | 投稿素材フォルダの検出、レシピの読み込み（recipe.yaml 優先、無ければ recipe.txt） |
-| `recipe_model.py` | recipe.yaml の読み込み・検証・書き出し（投稿先に依存しないレシピデータ） |
-| `recipe_text.py` | recipe.txt の読み込み（recipe.yaml と同じ形に変換。移行期間用） |
-| `rakuten_recipe.py` | 楽天レシピ向けの変換（調理時間・費用の選択肢、カテゴリ選択、文字数チェック） |
-| `browser.py` | Edge の起動 |
-| `rakuten_login.py` | 楽天レシピへのログイン |
-| `recipe_post.py` | 投稿画面への入力・公開申請・投稿の確認 |
-| `database.py` | 投稿履歴（post_history）の記録・読み込み |
-| `backup.py` | データベースのバックアップ（pg_dump） |
-| `convert_to_yaml.py` | recipe.txt → recipe.yaml の変換 |
-| `logger.py` | ログ出力 |
-| `docs/recipe-yaml.md` | recipe.yaml の書き方 |
-| `examples/` | recipe.yaml の例（楽天レシピに投稿済みのレシピ） |
-| `tests/` | 自動テスト |
+### フォルダ構成
+
+```
+Rakutenreshipi_Automation_Edge/
+├── main.py                    起動するファイル（全体の流れ: 未投稿のレシピの読み込み → ログイン → 投稿 → 記録 → バックアップ）
+├── recipe_poster/             プログラム本体
+│   ├── config.py              .env の読み込み・設定値
+│   ├── logger.py              ログ出力
+│   ├── recipes/               レシピの読み込み（どの投稿先でも使う）
+│   │   ├── model.py           recipe.yaml の読み込み・検証・書き出し
+│   │   ├── text.py            recipe.txt の読み込み（recipe.yaml と同じ形に変換。移行期間用）
+│   │   └── folders.py         投稿素材フォルダの検出、レシピの読み込み（recipe.yaml 優先）
+│   ├── rakuten/               楽天レシピ専用
+│   │   ├── browser.py         Edge の起動
+│   │   ├── login.py           楽天レシピへのログイン
+│   │   ├── post.py            投稿画面への入力・公開申請・投稿の確認
+│   │   └── convert.py         楽天レシピ向けの変換（調理時間・費用の選択肢、カテゴリ選択、文字数チェック）
+│   └── storage/               データベース
+│       ├── database.py        投稿履歴（post_history）の記録・読み込み
+│       └── backup.py          データベースのバックアップ（pg_dump）
+├── tools/convert_to_yaml.py   recipe.txt → recipe.yaml の変換
+├── tests/                     自動テスト
+├── docs/recipe-yaml.md        recipe.yaml の書き方
+├── examples/                  recipe.yaml の例（楽天レシピに投稿済みのレシピ）
+├── RakutenRecipe_Auto_Post.spec  exe の作成設定
+│
+└── （Git に入れないもの）.env、投稿素材/、logs/、backup/、RakutenRecipe_Auto_Post.exe
+```
+
+Instagram・TikTok などの投稿先を増やすときは、`rakuten/` と同じように投稿先ごとのフォルダを作ります。

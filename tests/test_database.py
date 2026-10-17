@@ -1,6 +1,6 @@
 import pytest
 
-import database
+from recipe_poster.storage import database
 
 
 class FakeCursor:

@@ -4,8 +4,8 @@
 *.key
 *.pem
 
-# --- drivers / binaries ---
-msedgedriver.exe
+# --- drivers / binaries（exe は GitHub の Releases で配る）---
+*.exe
 # Windows予約名対策
 NUL
 [Nn][Uu][Ll]

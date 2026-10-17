@@ -3,11 +3,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-import backup
-import config
-import database
+from recipe_poster import config
+from recipe_poster.storage import backup, database
 import main
-from rakuten_recipe import RakutenPost
+from recipe_poster.rakuten.convert import RakutenPost
 
 RECIPE_YAML = {
     "schema_version": 1, "title": "{title}", "description": "簡単です。", "servings": 2, "cook_minutes": 10,

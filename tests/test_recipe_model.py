@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from recipe_model import (
+from recipe_poster.recipes.model import (
     Ingredient, RecipeData, RecipeFormatError, Step, dump_recipe_yaml, load_recipe_yaml, parse_recipe_data,
 )
 

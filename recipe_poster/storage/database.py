@@ -14,8 +14,8 @@
 楽天レシピの履歴として1回だけ写す。"Recipe_info" 自体は消さずに残す（今後は使わない）。
 """
 import psycopg
-from config import DB_SETTINGS
-from logger import get_logger
+from recipe_poster.config import DB_SETTINGS
+from recipe_poster.logger import get_logger
 
 PLATFORM_RAKUTEN = "rakuten"
 

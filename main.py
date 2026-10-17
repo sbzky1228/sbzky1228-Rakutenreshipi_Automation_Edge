@@ -18,17 +18,16 @@ import argparse
 import sys
 from pathlib import Path
 
-import backup
-import config
-import database
-from browser import create_driver
-from database import PLATFORM_RAKUTEN
-from logger import get_logger
-from rakuten_login import login_to_rakuten
-from rakuten_recipe import RakutenPost, to_rakuten_post, validate_rakuten_post
-from recipe_folders import find_recipe_folders, load_recipe
-from recipe_model import RecipeFormatError
-from recipe_post import RecipePoster
+from recipe_poster import config
+from recipe_poster.logger import get_logger
+from recipe_poster.rakuten.browser import create_driver
+from recipe_poster.rakuten.convert import RakutenPost, to_rakuten_post, validate_rakuten_post
+from recipe_poster.rakuten.login import login_to_rakuten
+from recipe_poster.rakuten.post import RecipePoster
+from recipe_poster.recipes.folders import find_recipe_folders, load_recipe
+from recipe_poster.recipes.model import RecipeFormatError
+from recipe_poster.storage import backup, database
+from recipe_poster.storage.database import PLATFORM_RAKUTEN
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

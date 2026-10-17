@@ -15,8 +15,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import config
-from logger import get_logger
+from recipe_poster import config
+from recipe_poster.logger import get_logger
 
 BACKUP_PREFIX = "RakutenRecipe_information_"
 # pg_dump の場所の候補（PATH に無い場合。新しいバージョンを優先）

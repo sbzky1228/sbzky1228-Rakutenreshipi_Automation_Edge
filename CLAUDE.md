@@ -4,18 +4,22 @@
 
 ## 処理の流れとモジュール
 
-`main.py` → `database.posted_keys`（投稿済みのフォルダ名）→ `recipe_folders.load_recipe`（recipe.yaml 優先。yaml があれば txt は読まない。yaml に誤りがあればエラーで止め、txt に切り替えない）→ `rakuten_recipe.to_rakuten_post`（RecipeData → 楽天の入力内容 RakutenPost）→ `validate_rakuten_post` → `recipe_post.RecipePoster.post`（URLを返す）→ `database.add_post` → `backup.backup_if_due`
+起動はプロジェクト直下の `main.py` だけ。本体はパッケージ `recipe_poster/`（`recipes/` 投稿先に依存しない読み込み、`rakuten/` 楽天レシピ専用、`storage/` DB・バックアップ）、補助ツールは `tools/`。import は `from recipe_poster.xxx import ...` の絶対 import。構成図は README の「フォルダ構成」
 
-- recipe.txt は `recipe_text.parse_recipe_text` で recipe.yaml と同じ形の辞書にし、`recipe_model.parse_recipe_data` の同じ検証を通す（txt 専用の投稿処理は持たない）
-- 楽天レシピ固有のこと（選択肢・カテゴリ・文字数上限）は `rakuten_recipe.py` に閉じ込める。Instagram 等を足すときも同様に投稿先ごとのモジュールを作る
+`main.py` → `storage.database.posted_keys`（投稿済みのフォルダ名）→ `recipes.folders.load_recipe`（recipe.yaml 優先。yaml があれば txt は読まない。yaml に誤りがあればエラーで止め、txt に切り替えない）→ `rakuten.convert.to_rakuten_post`（RecipeData → 楽天の入力内容 RakutenPost）→ `validate_rakuten_post` → `rakuten.post.RecipePoster.post`（URLを返す）→ `storage.database.add_post` → `storage.backup.backup_if_due`
+
+- recipe.txt は `recipes.text.parse_recipe_text` で recipe.yaml と同じ形の辞書にし、`recipes.model.parse_recipe_data` の同じ検証を通す（txt 専用の投稿処理は持たない）
+- 楽天レシピ固有のこと（選択肢・カテゴリ・文字数上限）は `recipe_poster/rakuten/` に閉じ込める。Instagram 等を足すときも `recipe_poster/instagram/` のように投稿先ごとのフォルダを作る
+- `config.APP_DIR` は python 実行時は `recipe_poster` の1つ上（プロジェクト直下）。モジュールを移すときはここに注意
 
 ## 実行・ビルド・テスト
 
 - 実行: `python -X utf8 main.py [--dry-run] [--limit N] [--folder 名前] [--backup]`（コンソールがcp932のため `-X utf8`）
 - テスト: `python -X utf8 -m pytest`（ブラウザ・DBに触れない。Selenium部分はテスト対象外、`main` はフェイクの poster で確認）
-- 静的チェック: `python -m pyflakes *.py tests/*.py`、`python -m vulture *.py tests/*.py --min-confidence 60`（どちらも指摘ゼロを保つ）
+- 静的チェック: `python -m pyflakes main.py recipe_poster tools tests`、`python -m vulture main.py recipe_poster tools tests --min-confidence 60`（どちらも指摘ゼロを保つ）
 - GitHub Actions: `.github/workflows/tests.yml`（ubuntu、Python 3.12、`.env` 不要）。テストに秘密情報や実サイトへの接続を持ち込まない
 - exe: `python -m PyInstaller --noconfirm --clean --workpath "$env:TEMP\RakutenRecipe_build" RakutenRecipe_Auto_Post.spec` → `dist\RakutenRecipe_Auto_Post.exe` をプロジェクト直下へコピー（`.env` と同じフォルダで使う運用）。`dist`・`build` は消してよい
+  - exe は Git に入れない（`.gitignore` の `*.exe`）。配布は GitHub Releases
   - OneDrive配下なので `--workpath` を外に出す（WinError 5 対策）。**コードを変えたら exe を作り直す**
   - Selenium Manager（ドライバ自動取得）は PyInstaller の hook-selenium で同梱される。exe を別フォルダから `--dry-run` で起動して確認する
 - `config.APP_DIR`（exe時はexeのフォルダ）の `.env` を優先して読む。`logs`・`backup` もここ
@@ -25,14 +29,14 @@
 - `post_history`（recipe_key=フォルダ名, recipe_title, platform, post_url, posted_at、UNIQUE(recipe_key, platform)）。`database.connect()` が無ければ作り、旧 `"Recipe_info"` の記録を1回だけ写す（`"Recipe_info"` は残してあるが使わない）
 - 投稿日時は `clock_timestamp()`（`now()` はトランザクション開始＝処理開始の時刻になる）
 - 楽天レシピ上に同じタイトルがあるのに履歴に無い場合は、投稿せずにそのURLで履歴に記録する（記録漏れの自己修復）
-- バックアップ: `backup.py`。pg_dump（`PG_DUMP_PATH` → PATH → `C:\Program Files\PostgreSQL\<版>\bin`）で `--clean --if-exists` のプレーンSQL。最新ファイルの更新日時から `BACKUP_INTERVAL_DAYS` 日たったら取り、`BACKUP_KEEP` 個残す。`--dry-run` では取らない。パスワードは環境変数 PGPASSWORD で渡す
+- バックアップ: `storage/backup.py`。pg_dump（`PG_DUMP_PATH` → PATH → `C:\Program Files\PostgreSQL\<版>\bin`）で `--clean --if-exists` のプレーンSQL。最新ファイルの更新日時から `BACKUP_INTERVAL_DAYS` 日たったら取り、`BACKUP_KEEP` 個残す。`--dry-run` では取らない。パスワードは環境変数 PGPASSWORD で渡す
 - 復元の確認は一時DB（createdb → psql -f → dropdb）で行った。本番DBに psql -f を流さない
 
 ## recipe.yaml（投稿先に依存しないレシピデータ）
 
-- 楽天レシピ・Instagram・TikTok・自分のサイトで共通に使う正本。形式は `docs/recipe-yaml.md`、読み込み・検証・書き出しは `recipe_model.py`（`load_recipe_yaml` / `dump_recipe_yaml`）、変換は `convert_to_yaml.py`
+- 楽天レシピ・Instagram・TikTok・自分のサイトで共通に使う正本。形式は `docs/recipe-yaml.md`、読み込み・検証・書き出しは `recipes/model.py`（`load_recipe_yaml` / `dump_recipe_yaml`）、変換は `tools/convert_to_yaml.py`（引数なしで実行すると投稿素材の全フォルダに recipe.yaml を作るので、試すときはフォルダを指定する）
 - 数値は数値で持ち（`cook_minutes`・`cost_yen`）、投稿先ごとの表現は各投稿処理で変換する。投稿状態は書かない（DBで管理）
-- 項目を増やすときは `recipe_model` の `_TOP_LEVEL_KEYS` / `PLATFORM_FIELDS`、`dump_recipe_yaml`、docs、`examples/` をそろえて更新し、`schema_version` を上げるか検討する
+- 項目を増やすときは `recipes/model.py` の `_TOP_LEVEL_KEYS` / `PLATFORM_FIELDS`、`dump_recipe_yaml`、docs、`examples/` をそろえて更新し、`schema_version` を上げるか検討する
 - `examples/` は楽天レシピに投稿済みの4件（手動3件は公開ページの内容から作成）。写真は置いていない（テストは `check_files=False`）
 - 2026-10-17 時点: recipe.yaml があるのは投稿素材のチャーシューチャーハン・ピーマンのお吸い物和え。他の3件（エッグベネディクト・チョレギサラダ・豚の角煮）は recipe.txt のまま
 
@@ -47,10 +51,10 @@
 
 ## 楽天レシピの画面仕様（調査済み）
 
-- ログイン: `https://recipe.rakuten.co.jp/login/` → `login.account.rakuten.com`（ユーザーID `#user_id`→「次へ」`#cta001`、パスワード `#password_current`→`#cta011`）→ `/mypage/<会員番号>/`。毎回新しいプロファイルで起動するがパスキーは出ない（念のため `browser.CANCEL_PASSKEY_SCRIPT` で無効化）
+- ログイン: `https://recipe.rakuten.co.jp/login/` → `login.account.rakuten.com`（ユーザーID `#user_id`→「次へ」`#cta001`、パスワード `#password_current`→`#cta011`）→ `/mypage/<会員番号>/`。毎回新しいプロファイルで起動するがパスキーは出ない（念のため `rakuten.browser.CANCEL_PASSKEY_SCRIPT` で無効化）
 - 投稿画面 `/recipe/post/`: 最初の保存で下書き（`#recipePost[data-recipeid]`）が作られ、**各欄は blur 時に AJAX（`/recipe/post/save/...`）で下書きに保存**される。公開申請（`/recipe/post/publish/`）は recipeId だけを送るため、blur と保存完了待ちが必須
-  - ページの jQuery はグローバルに無い。保存中の通信は `browser.TRACK_SAVING_SCRIPT` が `window.__recipeSaving` に数える
-  - 入力欄は `[data-name='レシピタイトル' / 'レシピコメント' / '人数' / '材料名' / '分量' / '作り方コメント' / 'きっかけ' / 'おいしくなるコツ' / '料理名']`。上限は `data-maxlength`（maxlength属性ではないので超えても入力できてしまう → `rakuten_recipe.validate_rakuten_post` で事前チェック）
+  - ページの jQuery はグローバルに無い。保存中の通信は `rakuten.browser.TRACK_SAVING_SCRIPT` が `window.__recipeSaving` に数える
+  - 入力欄は `[data-name='レシピタイトル' / 'レシピコメント' / '人数' / '材料名' / '分量' / '作り方コメント' / 'きっかけ' / 'おいしくなるコツ' / '料理名']`。上限は `data-maxlength`（maxlength属性ではないので超えても入力できてしまう → `rakuten.convert.validate_rakuten_post` で事前チェック）
   - 写真 `#food_image input[type=file]` → `#food_image_path` に src が入れば完了。調理時間 `#recipe_indication select`、費用 `#recipe_cost select`（どちらも name="time"）
   - 材料4行・作り方3行が初期表示。追加ボタン `[data-ratid='RecipePost_material_add_button' / 'RecipePost_process_add_button']`。**入力の合間に追加すると増えないことがあったため、先に必要な行数まで追加してから入力する**
   - カテゴリ: `[data-ratid='RecipePost_category_edit_button']` → `[data-tab-id='list']`（カテゴリ一覧、約1570件、`input.js_category_check[data-check-categoryname]`）。**チェックは行 `.js_category_check__flg` のクリックで切り替わる。input を直接押すと2回切り替わって外れる**。選択中は `.js_category__item`、最大5件。保存 `[data-ratid='RecipePost_category_search_save_button']`

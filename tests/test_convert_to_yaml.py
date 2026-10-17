@@ -1,5 +1,5 @@
-import convert_to_yaml
-from recipe_model import load_recipe_yaml
+from tools import convert_to_yaml
+from recipe_poster.recipes.model import load_recipe_yaml
 
 RECIPE_TEXT = """■レシピタイトル（25文字以内）
 豚の角煮の甘辛煮込み
