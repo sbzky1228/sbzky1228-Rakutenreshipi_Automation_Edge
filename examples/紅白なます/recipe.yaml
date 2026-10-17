@@ -1,0 +1,52 @@
+# 楽天レシピに公開済み（手動で投稿）: https://recipe.rakuten.co.jp/recipe/1150025736/
+# レシピデータ（楽天レシピ・Instagram・TikTok・自分のサイトで共通に使う）
+# 書き方の説明: docs/recipe-yaml.md
+schema_version: 1
+id: kohaku-namasu
+title: 紅白なます
+dish_name: 紅白なます
+description: |
+  食卓に簡単に一品追加したいときに作ってみてください
+  メイン料理を作っている間に浸しておくだけで味が染みます
+
+# 人数・調理時間（分）・費用の目安（円）
+servings: 2
+cook_minutes: 5
+cost_yen: 100
+tags: [なます]
+
+# 材料（group は「A」などの合わせ調味料のまとまり）
+ingredients:
+  - name: 大根
+    amount: 1/4本
+  - name: 人参
+    amount: 1/2本
+  - name: 酢
+    amount: 60ml(大さじ4)
+  - name: 砂糖
+    amount: 30g(大さじ2)
+  - name: 塩(下ごしらえ用)
+    amount: 1g
+  - name: ゴマ(お好み)
+    amount: 1g
+
+# 作り方（image は手順の写真、任意）
+steps:
+  - text: 大根、ニンジンは細切りにする
+  - text: 塩をまぶして5分ほど置いておく
+  - text: |
+      水分が出たら切って、酢、砂糖をに漬けておく
+      (酢や砂糖が足りないときはお好みで追加してください)
+  - text: お皿に盛りつけたらゴマをかけて完成
+
+# きっかけ
+story: 簡単でさっぱりした副菜が欲しくて作りました
+
+# おいしくなるコツ
+tips: |
+  ・塩で水分を抜いた後はしっかり水分を切るとおいしくなります
+  ・漬けておく時間は短時間でもいいですが長く漬けとくとよりおいしくなります
+
+# 写真（recipe.yaml と同じフォルダからの相対パス）
+images:
+  main: main.jpg

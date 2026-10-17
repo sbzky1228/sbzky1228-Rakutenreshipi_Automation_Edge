@@ -1,0 +1,45 @@
+# 楽天レシピに公開済み（手動で投稿）: https://recipe.rakuten.co.jp/recipe/1150025724/
+# レシピデータ（楽天レシピ・Instagram・TikTok・自分のサイトで共通に使う）
+# 書き方の説明: docs/recipe-yaml.md
+schema_version: 1
+id: horenso-no-ohitashi
+title: ほうれん草のおひたし
+dish_name: ほうれん草のおひたし
+description: |
+  かんたんほうれん草のおひたし
+  プラス一品したいときにぜひ！
+
+# 人数・調理時間（分）・費用の目安（円）
+servings: 2
+cook_minutes: 5
+cost_yen: 300
+tags: [ほうれん草のおひたし]
+
+# 材料（group は「A」などの合わせ調味料のまとまり）
+ingredients:
+  - name: ほうれん草
+    amount: 5束
+  - name: 白だし
+    amount: 大さじ1
+  - name: めんつゆ
+    amount: 小さじ1
+  - name: かつお節
+    amount: 3ｇ
+
+# 作り方（image は手順の写真、任意）
+steps:
+  - text: ほうれん草は茎と葉をしっかり洗う
+  - text: 沸騰したお湯に茎だけを先に30秒ほどつける
+  - text: 葉まで入れて1~2分煮る
+  - text: ザルにあげて水を切ったら、一口大に切る
+  - text: お皿に盛り付け白だし、めんつゆを入れ、かつお節をのせたら完成！
+
+# きっかけ
+story: 簡単に作れる一品が欲しくて作ってみました
+
+# おいしくなるコツ
+tips: ほうれん草の色が出すぎないように注意
+
+# 写真（recipe.yaml と同じフォルダからの相対パス）
+images:
+  main: main.jpg

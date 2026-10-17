@@ -1,0 +1,67 @@
+# 楽天レシピに投稿済み（このツールで 2026-10-12 に公開申請）
+# platforms の instagram / tiktok は書き方の見本（まだ投稿していない）
+# レシピデータ（楽天レシピ・Instagram・TikTok・自分のサイトで共通に使う）
+# 書き方の説明: docs/recipe-yaml.md
+schema_version: 1
+id: chashu-chahan
+title: チャーシューチャーハン
+dish_name: チャーシューチャーハン
+description: 余ったチャーシューを使った簡単チャーハン。旨味たっぷりのご飯が楽しめます！
+
+# 人数・調理時間（分）・費用の目安（円）
+servings: 2
+cook_minutes: 15
+cost_yen: 600
+tags: [ご飯・丼もの]
+meal: [昼食, 夕食]
+
+# 材料（group は「A」などの合わせ調味料のまとまり）
+ingredients:
+  - name: ご飯
+    amount: 400g
+  - name: チャーシュー
+    amount: 150g
+  - name: ネギ
+    amount: 1本
+  - name: 卵
+    amount: 2個
+  - name: 醤油
+    amount: 大さじ1
+  - name: ごま油
+    amount: 大さじ1
+  - name: 塩
+    amount: 少々
+  - name: こしょう
+    amount: 少々
+
+# 作り方（image は手順の写真、任意）
+steps:
+  - text: チャーシューとネギを1cm角に切る。
+  - text: フライパンにごま油を熱し、ネギを炒める。
+  - text: チャーシューを加えて炒め、香りが立ったらご飯を入れる。
+  - text: 全体を混ぜ合わせ、卵を割り入れて炒める。
+  - text: 醤油、塩、こしょうで味を調え、全体がよく混ざったら完成。
+
+# きっかけ
+story: 友人を家に招く機会があり、余っていたチャーシューを使った料理を考えました。パパッと作れるチャーハンなら、みんなで楽しめると思いこのレシピを作成しました。
+
+# おいしくなるコツ
+tips: ご飯は冷ご飯を使うとパラっと仕上がります。チャーシューは少し焦げ目がつくまで炒めると香ばしさが増します。仕上げにごま油をひと回しすると、一層風味が良くなります。
+
+# 写真（recipe.yaml と同じフォルダからの相対パス）
+images:
+  main: main.jpg
+
+# 投稿先ごとの上書き・追加（書かなければ共通の項目を使う）
+platforms:
+  rakuten:
+    categories: [男の簡単料理, 500円前後の節約料理]
+  instagram:
+    caption: |
+      余ったチャーシューで15分チャーハン🍳
+      冷ご飯を使うとパラっと仕上がります
+    hashtags: [チャーハン, 簡単レシピ, 男飯, 節約レシピ]
+  tiktok:
+    video: tiktok.mp4
+    caption: 冷ご飯でパラパラ！チャーシューチャーハン
+    hashtags: [料理, 時短レシピ]

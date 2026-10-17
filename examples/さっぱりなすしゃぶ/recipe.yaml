@@ -1,0 +1,52 @@
+# 楽天レシピに公開済み（手動で投稿）: https://recipe.rakuten.co.jp/recipe/1150025771/
+# レシピデータ（楽天レシピ・Instagram・TikTok・自分のサイトで共通に使う）
+# 書き方の説明: docs/recipe-yaml.md
+schema_version: 1
+id: sappari-nasu-shabu
+title: さっぱりなすしゃぶ
+dish_name: さっぱりなすしゃぶ
+description: |
+  簡単に作れてさっぱりした味わい
+  食欲がなくてもたくさん食べれます
+
+# 人数・調理時間（分）・費用の目安（円）
+servings: 2
+cook_minutes: 15
+cost_yen: 300
+tags: [豚バラ肉]
+
+# 材料（group は「A」などの合わせ調味料のまとまり）
+ingredients:
+  - name: なす
+    amount: 3本
+  - name: 豚バラ(しゃぶしゃぶ用)
+    amount: 300g
+  - name: みょうが
+    amount: 1個
+  - name: ぽん酢
+    amount: 60ml(大さじ4)
+  - name: 砂糖
+    amount: 15g(大さじ1)
+  - name: ゴマ
+    amount: 5g(小さじ1)
+  - name: サラダ油
+    amount: 15ml(大さじ1)
+
+# 作り方（image は手順の写真、任意）
+steps:
+  - text: なすは薄切り、みょうがは細切りにする
+  - text: フライパンにサラダ油をひいて中火でなすを焼く
+  - text: 沸騰させた鍋で豚バラ肉を1分～2分茹でる
+  - text: 豚バラ肉は冷水でしめる
+  - text: ぽん酢、砂糖、ゴマを混ぜる
+  - text: なす、豚バラ肉、みょうがをお皿に盛りつけ作ったタレをかけて完成
+
+# きっかけ
+story: 夏や食欲が無いときにさっぱり食べれる料理を考えて作りました
+
+# おいしくなるコツ
+tips: しゃぶしゃぶ肉は茹ですぎると固くなるため茹で時間は注意。
+
+# 写真（recipe.yaml と同じフォルダからの相対パス）
+images:
+  main: main.jpg
