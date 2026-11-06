@@ -44,6 +44,7 @@ Edge のドライバ（msedgedriver）は Selenium が Edge のバージョン�
    | `BACKUP_INTERVAL_DAYS`（任意） | 何日ごとにバックアップするか（未指定なら7） |
    | `BACKUP_KEEP`（任意） | バックアップを何個残すか（未指定なら10） |
    | `PG_DUMP_PATH`（任意） | pg_dump.exe の場所（未指定なら `C:\Program Files\PostgreSQL\<版>\bin` などから自動で探す） |
+   | `LINE_CHANNEL_ACCESS_TOKEN` / `LINE_USER_ID`（任意） | 結果をLINEに通知する（[LINE通知](#line通知)） |
    | `DRIVER_PATH`（任意） | ドライバを自動で用意できない環境（オフライン等）で使う msedgedriver.exe |
    | `LOG_DIR`（任意） | ログの保存先（未指定ならプログラムのフォルダの `logs`） |
 
@@ -125,12 +126,28 @@ python main.py --limit 1               # 1件だけ投稿
 python main.py --folder 豚の角煮        # 指定したフォルダだけ投稿（複数指定可）
 python main.py --dry-run               # 入力まで行い、公開申請・投稿履歴の記録・バックアップはしない（動作確認用）
 python main.py --backup                # データベースのバックアップだけを取る
+python main.py --line-test             # LINE通知のテストメッセージを送る
 ```
 
 exe の場合も同じ引数が使えます（例: `RakutenRecipe_Auto_Post.exe --dry-run`）。
-終了コードは、すべて成功（または対象なし）なら 0、投稿・バックアップに失敗があれば 1 です（タスクスケジューラの「前回の実行結果」で確認できます）。
+終了コードは、すべて成功（または対象なし）なら 0、投稿・バックアップ・LINE通知に失敗があれば 1 です（タスクスケジューラの「前回の実行結果」で確認できます）。
 
 ログは `logs\rakuten_recipe_日付_時刻.log` に出力されます。失敗したときの画面も `logs` に保存されます（不要になったら消してかまいません）。
+
+### LINE通知
+
+`.env` に LINE の設定があると、実行の最後に結果を LINE に送ります（`--dry-run` では送りません）。
+
+- 送るのは、公開申請したレシピ（URL付き）・楽天レシピに既にあり履歴に記録だけしたレシピ・投稿に失敗したレシピ・エラー（最大5件とログファイル名）があったとき。投稿するレシピが無く、エラーも無い日は送りません
+- 送れなかった場合はログに理由を残し、終了コードを 1 にします（投稿・記録はそのまま）
+
+LINE Notify は 2025年3月に終了したため、LINE公式アカウントの Messaging API を使います（無料プランで月200通まで）。
+
+1. [LINE Developers](https://developers.line.biz/console/) でプロバイダーと「Messaging API」のチャネルを作る（LINE公式アカウントが作られる）
+2. 「Messaging API設定」の QR コードから、自分の LINE でその公式アカウントを友だち追加する
+3. 「Messaging API設定」の「チャネルアクセストークン（長期）」を発行して `LINE_CHANNEL_ACCESS_TOKEN` に設定する
+4. 「チャネル基本設定」の一番下の「あなたのユーザーID」（U から始まる33文字）を `LINE_USER_ID` に設定する
+5. `python main.py --line-test`（exe なら `RakutenRecipe_Auto_Post.exe --line-test`）でテストメッセージが届くか確認する
 
 ### 投稿をやり直したいとき
 
@@ -201,10 +218,13 @@ exe は Git に入れず（`.gitignore` で除外）、配るときは GitHub �
 
 ```
 Rakutenreshipi_Automation_Edge/
-├── main.py                    起動するファイル（全体の流れ: 未投稿のレシピの読み込み → ログイン → 投稿 → 記録 → バックアップ）
+├── main.py                    起動するファイル（全体の流れ: 未投稿のレシピの読み込み → ログイン → 投稿 → 記録 → バックアップ → LINE通知）
 ├── recipe_poster/             プログラム本体
 │   ├── config.py              .env の読み込み・設定値
 │   ├── logger.py              ログ出力
+│   ├── notify/                結果の通知
+│   │   ├── report.py          実行結果のまとめ・通知の文章
+│   │   └── line.py            LINE（Messaging API）への送信
 │   ├── recipes/               レシピの読み込み（どの投稿先でも使う）
 │   │   ├── model.py           recipe.yaml の読み込み・検証・書き出し
 │   │   ├── text.py            recipe.txt の読み込み（recipe.yaml と同じ形に変換。移行期間用）

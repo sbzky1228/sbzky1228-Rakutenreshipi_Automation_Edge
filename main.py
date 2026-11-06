@@ -6,6 +6,7 @@
 2. 楽天レシピにログインし、1件ずつ入力して公開申請する
 3. 投稿できたレシピを投稿履歴に記録する（フォルダは移動しない）
 4. 前回のバックアップから一定日数たっていれば、データベースをバックアップする
+5. 投稿・失敗・エラーがあれば、結果をLINEに通知する（.env に LINE の設定があるときだけ）
 
 使い方:
     python main.py                       未投稿のレシピをすべて投稿する
@@ -13,6 +14,7 @@
     python main.py --folder 豚の角煮      指定したフォルダだけ投稿する（複数指定可）
     python main.py --dry-run             入力まで行い、公開申請・記録・バックアップはしない（動作確認用）
     python main.py --backup              データベースのバックアップだけを取る
+    python main.py --line-test           LINE通知の設定を確認する（テストメッセージを送る）
 """
 import argparse
 import sys
@@ -20,6 +22,8 @@ from pathlib import Path
 
 from recipe_poster import config
 from recipe_poster.logger import get_logger
+from recipe_poster.notify import line
+from recipe_poster.notify.report import RunReport
 from recipe_poster.rakuten.browser import create_driver
 from recipe_poster.rakuten.convert import RakutenPost, to_rakuten_post, validate_rakuten_post
 from recipe_poster.rakuten.login import login_to_rakuten
@@ -38,6 +42,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true",
                         help="入力まで行い、公開申請・投稿履歴の記録・バックアップはしない")
     parser.add_argument("--backup", action="store_true", help="データベースのバックアップだけを取る")
+    parser.add_argument("--line-test", action="store_true", help="LINE通知のテストメッセージを送る")
     return parser.parse_args(argv)
 
 
@@ -80,9 +85,13 @@ def _record(conn, post: RakutenPost, url: str):
 
 
 def post_recipes(targets: list[RakutenPost], poster: RecipePoster, conn, dry_run: bool,
-                 limit: int | None = None) -> tuple[int, int]:
-    """レシピを順に投稿し、(投稿できた件数, 失敗した件数) を返す。limit 件を試したら終わる"""
+                 limit: int | None = None, report: RunReport | None = None) -> tuple[int, int]:
+    """
+    レシピを順に投稿し、(投稿できた件数, 失敗した件数) を返す。limit 件を試したら終わる
+    report を渡すと、投稿できた・失敗したレシピを書き込む（LINE通知用）
+    """
     logger = get_logger()
+    report = report if report is not None else RunReport()
     on_site = poster.posted_recipes()
     succeeded = failed = 0
 
@@ -94,6 +103,7 @@ def post_recipes(targets: list[RakutenPost], poster: RecipePoster, conn, dry_run
             else:
                 logger.warning(f"{post.key}: 「{post.title}」は楽天レシピに投稿済みのため投稿せず、投稿履歴に記録します")
                 _record(conn, post, on_site[post.title])
+                report.recorded.append((post.title, on_site[post.title]))
             continue
         if limit is not None and succeeded + failed >= limit:
             break
@@ -102,15 +112,17 @@ def post_recipes(targets: list[RakutenPost], poster: RecipePoster, conn, dry_run
         url = poster.post(post, dry_run=dry_run)
         if url is None:
             failed += 1
+            report.failed.append(post.title)
             continue
         succeeded += 1
         if not dry_run:
             _record(conn, post, url)
+            report.posted.append((post.title, url))
 
     return succeeded, failed
 
 
-def run_posting(args: argparse.Namespace) -> int:
+def run_posting(args: argparse.Namespace, report: RunReport) -> int:
     """投稿の処理を行い、終了コード（0: 正常、1: 失敗あり）を返す"""
     logger = get_logger()
     conn = driver = None
@@ -131,7 +143,8 @@ def run_posting(args: argparse.Namespace) -> int:
         member_id = login_to_rakuten(driver)
         if not member_id:
             return 1
-        succeeded, failed = post_recipes(targets, RecipePoster(driver, member_id), conn, args.dry_run, args.limit)
+        succeeded, failed = post_recipes(targets, RecipePoster(driver, member_id), conn, args.dry_run, args.limit,
+                                         report=report)
         logger.info(f"終了しました: 成功 {succeeded}件 / 失敗 {failed}件")
         return 1 if failed else 0
     except FileNotFoundError as e:
@@ -157,15 +170,36 @@ def main(argv: list[str] | None = None) -> int:
         logger.error(f".env に次の項目を設定してください: {', '.join(missing)}")
         return 1
 
+    if args.line_test:
+        if not line.is_enabled():
+            logger.error(".env に LINE_CHANNEL_ACCESS_TOKEN と LINE_USER_ID を設定してください")
+            return 1
+        return 0 if line.send_line_message("楽天レシピ自動投稿: LINE通知のテストです") else 1
+
     if args.backup:
         return 0 if backup.backup_if_due(force=True) else 1
 
     logger.info("楽天レシピ自動投稿を開始します" + ("（お試し実行）" if args.dry_run else ""))
-    result = run_posting(args)
+    report = RunReport()
+    result = run_posting(args, report)
     # 定期実行のたびに確認し、前回から BACKUP_INTERVAL_DAYS 日以上たっていればバックアップする
     if not args.dry_run and not backup.backup_if_due():
         result = 1
+    if not args.dry_run and not notify_result(report):
+        result = 1
     return result
+
+
+def notify_result(report: RunReport) -> bool:
+    """
+    結果をLINEに通知する。投稿もエラーも無い日・LINEの設定が無いときは送らない
+    送れなかったときだけ False を返す
+    """
+    logger = get_logger()
+    errors = list(logger.errors)
+    if not report.has_news(errors) or not line.is_enabled():
+        return True
+    return line.send_line_message(report.to_message(errors, logger.log_file.name))
 
 
 if __name__ == "__main__":

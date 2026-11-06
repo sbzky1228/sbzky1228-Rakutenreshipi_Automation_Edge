@@ -22,6 +22,8 @@ class Logger:
         # ログファイル名（例: rakuten_recipe_20261012_143022.log）
         now = datetime.datetime.now()
         self.log_file = log_dir / f"rakuten_recipe_{now.strftime('%Y%m%d_%H%M%S')}.log"
+        # この実行で出たエラー（LINE通知にまとめて載せる）
+        self.errors: list[str] = []
 
     def log(self, message: str, level: str = 'INFO'):
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -37,6 +39,7 @@ class Logger:
         self.log(message, 'WARNING')
 
     def error(self, message: str):
+        self.errors.append(message)
         self.log(message, 'ERROR')
 
 

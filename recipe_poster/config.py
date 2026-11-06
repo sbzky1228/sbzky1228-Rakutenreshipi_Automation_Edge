@@ -72,6 +72,12 @@ BACKUP_KEEP = _env_int('BACKUP_KEEP', 10)                         # 残す個数
 PG_DUMP_PATH = _env('PG_DUMP_PATH')  # pg_dump.exe の場所（未指定なら自動で探す）
 
 # ============================================================
+# LINE通知（LINE Messaging API のプッシュメッセージ。両方とも未設定なら通知しない）
+# ============================================================
+LINE_CHANNEL_ACCESS_TOKEN = _env('LINE_CHANNEL_ACCESS_TOKEN')  # チャネルアクセストークン（長期）
+LINE_USER_ID = _env('LINE_USER_ID')                            # 送り先のユーザーID（U から始まる33文字）
+
+# ============================================================
 # Edge WebDriver
 # 通常は Selenium が Edge のバージョンに合うドライバを自動で用意する。
 # オフライン等で自動取得できない場合だけ、DRIVER_PATH の msedgedriver.exe を使う

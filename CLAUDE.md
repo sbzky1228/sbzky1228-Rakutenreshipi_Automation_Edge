@@ -6,7 +6,7 @@
 
 起動はプロジェクト直下の `main.py` だけ。本体はパッケージ `recipe_poster/`（`recipes/` 投稿先に依存しない読み込み、`rakuten/` 楽天レシピ専用、`storage/` DB・バックアップ）、補助ツールは `tools/`。import は `from recipe_poster.xxx import ...` の絶対 import。構成図は README の「フォルダ構成」
 
-`main.py` → `storage.database.posted_keys`（投稿済みのフォルダ名）→ `recipes.folders.load_recipe`（recipe.yaml 優先。yaml があれば txt は読まない。yaml に誤りがあればエラーで止め、txt に切り替えない）→ `rakuten.convert.to_rakuten_post`（RecipeData → 楽天の入力内容 RakutenPost）→ `validate_rakuten_post` → `rakuten.post.RecipePoster.post`（URLを返す）→ `storage.database.add_post` → `storage.backup.backup_if_due`
+`main.py` → `storage.database.posted_keys`（投稿済みのフォルダ名）→ `recipes.folders.load_recipe`（recipe.yaml 優先。yaml があれば txt は読まない。yaml に誤りがあればエラーで止め、txt に切り替えない）→ `rakuten.convert.to_rakuten_post`（RecipeData → 楽天の入力内容 RakutenPost）→ `validate_rakuten_post` → `rakuten.post.RecipePoster.post`（URLを返す）→ `storage.database.add_post` → `storage.backup.backup_if_due` → `main.notify_result`（LINE通知）
 
 - recipe.txt は `recipes.text.parse_recipe_text` で recipe.yaml と同じ形の辞書にし、`recipes.model.parse_recipe_data` の同じ検証を通す（txt 専用の投稿処理は持たない）
 - 楽天レシピ固有のこと（選択肢・カテゴリ・文字数上限）は `recipe_poster/rakuten/` に閉じ込める。Instagram 等を足すときも `recipe_poster/instagram/` のように投稿先ごとのフォルダを作る
@@ -23,6 +23,12 @@
   - OneDrive配下なので `--workpath` を外に出す（WinError 5 対策）。**コードを変えたら exe を作り直す**
   - Selenium Manager（ドライバ自動取得）は PyInstaller の hook-selenium で同梱される。exe を別フォルダから `--dry-run` で起動して確認する
 - `config.APP_DIR`（exe時はexeのフォルダ）の `.env` を優先して読む。`logs`・`backup` もここ
+
+## LINE通知
+
+- `notify/line.py`: LINE Messaging API のプッシュ（`https://api.line.me/v2/bot/message/push`、urllib のみ）。LINE Notify は 2025/3 に終了したので使わない。`.env` の `LINE_CHANNEL_ACCESS_TOKEN`・`LINE_USER_ID` が両方あるときだけ送る
+- `notify/report.py` の `RunReport` に `post_recipes` が公開申請・履歴だけ記録・失敗を書き込み、エラーは `Logger.errors`（`logger.error` の内容）から取る。投稿もエラーも無い日・`--dry-run` は送らない。送信失敗は終了コード1
+- `--line-test` でテスト送信。テストでは `line.send_line_message` を差し替え、実際には送らない（無料プランは月200通）
 
 ## データベース
 

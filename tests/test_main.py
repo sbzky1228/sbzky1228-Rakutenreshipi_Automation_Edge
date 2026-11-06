@@ -4,6 +4,7 @@ import pytest
 import yaml
 
 from recipe_poster import config
+from recipe_poster.notify import line
 from recipe_poster.storage import backup, database
 import main
 from recipe_poster.rakuten.convert import RakutenPost
@@ -84,6 +85,11 @@ def run_env(monkeypatch, tmp_path):
     monkeypatch.setattr(main, "login_to_rakuten", lambda driver: "123")
     monkeypatch.setattr(main, "RecipePoster", lambda driver, member_id: env.poster)
     monkeypatch.setattr(backup, "backup_if_due", lambda force=False: env.backups.append(force) or True)
+    # LINE通知は送らずにためる（.env に LINE の設定があっても実際には送らない）
+    env.line_messages = []
+    monkeypatch.setattr(config, "LINE_CHANNEL_ACCESS_TOKEN", "token")
+    monkeypatch.setattr(config, "LINE_USER_ID", "U123")
+    monkeypatch.setattr(line, "send_line_message", lambda text: env.line_messages.append(text) or True)
     return env
 
 
@@ -203,3 +209,66 @@ def test_main_returns_1_when_backup_fails(run_env, tmp_path, monkeypatch):
 def test_main_backup_option(run_env):  # 投稿素材フォルダが無くてもバックアップだけは取れる
     assert main.main(["--backup"]) == 0
     assert run_env.backups == [True]
+
+
+def test_post_recipes_fills_report(recorded):
+    report = main.RunReport()
+    poster = FakePoster(on_site={"既存": "https://recipe.rakuten.co.jp/recipe/99/"}, fail={"失敗"})
+    main.post_recipes([make_post("既存"), make_post("卵焼き"), make_post("失敗")], poster, conn=object(),
+                      dry_run=False, report=report)
+    assert report.posted == [("卵焼き", "https://recipe.rakuten.co.jp/recipe/1/")]
+    assert report.recorded == [("既存", "https://recipe.rakuten.co.jp/recipe/99/")]
+    assert report.failed == ["失敗"]
+
+
+def test_main_notifies_posted_recipes(run_env, tmp_path, recorded):
+    make_recipe_folder(tmp_path / "投稿素材", "卵焼き")
+    assert main.main([]) == 0
+    assert len(run_env.line_messages) == 1
+    message = run_env.line_messages[0]
+    assert "✅ 公開申請しました: 1件" in message
+    assert "・卵焼き\nhttps://recipe.rakuten.co.jp/recipe/1/" in message
+    assert "エラー" not in message
+
+
+def test_main_notifies_failure_with_reason(run_env, tmp_path, recorded):
+    make_recipe_folder(tmp_path / "投稿素材", "卵焼き")
+    make_recipe_folder(tmp_path / "投稿素材", "タイトルなし", title="")
+    run_env.poster = FakePoster(fail={"卵焼き"})
+    assert main.main([]) == 1
+    message = run_env.line_messages[0]
+    assert "❌ 投稿に失敗しました: 1件\n・卵焼き" in message
+    assert "タイトルなし: 内容に問題があるため投稿しません" in message
+    assert "ログ: rakuten_recipe_" in message
+
+
+def test_main_does_not_notify_when_nothing_happened(run_env, tmp_path):
+    (tmp_path / "投稿素材").mkdir()
+    assert main.main([]) == 0
+    assert run_env.line_messages == []
+
+
+def test_main_dry_run_does_not_notify(run_env, tmp_path):
+    make_recipe_folder(tmp_path / "投稿素材", "卵焼き")
+    assert main.main(["--dry-run"]) == 0
+    assert run_env.line_messages == []
+
+
+def test_main_without_line_settings_does_not_notify(run_env, tmp_path, recorded, monkeypatch):
+    monkeypatch.setattr(config, "LINE_CHANNEL_ACCESS_TOKEN", "")
+    monkeypatch.setattr(config, "LINE_USER_ID", "")
+    make_recipe_folder(tmp_path / "投稿素材", "卵焼き")
+    assert main.main([]) == 0
+    assert run_env.line_messages == []
+
+
+def test_main_returns_1_when_line_fails(run_env, tmp_path, recorded, monkeypatch):
+    make_recipe_folder(tmp_path / "投稿素材", "卵焼き")
+    monkeypatch.setattr(line, "send_line_message", lambda text: False)
+    assert main.main([]) == 1
+
+
+def test_main_line_test(run_env):
+    assert main.main(["--line-test"]) == 0
+    assert run_env.line_messages == ["楽天レシピ自動投稿: LINE通知のテストです"]
+    assert run_env.backups == []
